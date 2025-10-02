@@ -221,30 +221,28 @@ class LexicalDiversityNanoGPT:
             'message': message
         }
 
-
-# Usage
 def main():
-    # First train a small nanoGPT model (or use pretrained)
-    # See nanoGPT repo for training instructions
-    
     generator = LexicalDiversityNanoGPT(model_path='out-shakespeare-char/ckpt.pt')
-    
-    # Test single generation
-    high_div = generator.generate_with_diversity(
-        prompt="The analysis shows",
-        target_diversity=0.85,
-        max_new_tokens=40
-    )
-    
-    print(f"\nHigh diversity text: {high_div}")
-    print(f"Actual diversity: {generator.calculate_lexical_diversity(high_div):.3f}")
     
     # Generate full chain
     result = generator.generate_am_modulated_chain(
         message="HELLO",
-        num_steps=20,
+        num_steps=100,
         carrier_freq=3.0
     )
+    
+    # Save to JSON
+    output = {
+        'message': result['message'],
+        'correlation': float(result['correlation']),
+        'reasoning_steps': result['reasoning_steps'],
+        'target_diversities': [float(x) for x in result['target_diversities']],
+        'actual_diversities': [float(x) for x in result['actual_diversities']]
+    }
+    
+    with open('nanogpt_hello_data.json', 'w') as f:
+        json.dump(output, f, indent=2)
+    print("Saved: nanogpt_hello_data.json")
 
 if __name__ == "__main__":
     main()
