@@ -39,7 +39,7 @@ class LexicalDiversityNanoGPT:
         self.model.to(self.device)
         
         # Load tokenizer (meta.pkl contains the character mappings)
-        with open('meta.pkl', 'rb') as f:
+        with open('data/shakespeare_char/meta.pkl', 'rb') as f:
             meta = pickle.load(f)
         self.stoi = meta['stoi']
         self.itos = meta['itos']
