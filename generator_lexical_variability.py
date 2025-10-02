@@ -219,7 +219,7 @@ def main():
     # First train a small nanoGPT model (or use pretrained)
     # See nanoGPT repo for training instructions
     
-    generator = LexicalDiversityNanoGPT(model_path='out/ckpt.pt')
+    generator = LexicalDiversityNanoGPT(model_path='out-shakespeare-char/ckpt.pt')
     
     # Test single generation
     high_div = generator.generate_with_diversity(
