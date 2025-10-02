@@ -25,7 +25,15 @@ class LexicalDiversityNanoGPT:
         self.model = GPT(gptconf)
         
         # Load weights
+        # Load weights
         state_dict = checkpoint['model']
+        
+        # Remove _orig_mod. prefix if present (from torch.compile)
+        unwanted_prefix = '_orig_mod.'
+        for k, v in list(state_dict.items()):
+            if k.startswith(unwanted_prefix):
+                state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+        
         self.model.load_state_dict(state_dict)
         self.model.eval()
         self.model.to(self.device)
