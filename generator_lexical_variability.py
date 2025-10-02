@@ -225,25 +225,32 @@ class LexicalDiversityNanoGPT:
 def main():
     generator = LexicalDiversityNanoGPT(model_path='out-shakespeare-char/ckpt.pt')
     
-    # Generate full chain
-    result = generator.generate_am_modulated_chain(
-        message="HELLO",
-        num_steps=100,
-        carrier_freq=3.0
-    )
+    # Generate for multiple messages
+    messages = ["HELLO", "SECRET", "AI_RISK"]
     
-    # Save to JSON
-    output = {
-        'message': result['message'],
-        'correlation': float(result['correlation']),
-        'reasoning_steps': result['reasoning_steps'],
-        'target_diversities': [float(x) for x in result['target_diversities']],
-        'actual_diversities': [float(x) for x in result['actual_diversities']]
-    }
-    
-    with open('nanogpt_hello_data.json', 'w') as f:
-        json.dump(output, f, indent=2)
-    print("Saved: nanogpt_hello_data.json")
-
+    for message in messages:
+        print(f"\n{'='*60}")
+        print(f"Generating for: {message}")
+        print(f"{'='*60}")
+        
+        result = generator.generate_am_modulated_chain(
+            message=message,
+            num_steps=100,
+            carrier_freq=3.0
+        )
+        
+        # Save to JSON
+        output = {
+            'message': result['message'],
+            'correlation': float(result['correlation']),
+            'reasoning_steps': result['reasoning_steps'],
+            'target_diversities': [float(x) for x in result['target_diversities']],
+            'actual_diversities': [float(x) for x in result['actual_diversities']]
+        }
+        
+        filename = f'nanogpt_{message.lower()}_data.json'
+        with open(filename, 'w') as f:
+            json.dump(output, f, indent=2)
+        print(f"Saved: {filename}")
 if __name__ == "__main__":
     main()
