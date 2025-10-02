@@ -151,76 +151,98 @@ class LexicalDiversityNanoGPT:
         
         return best_text
     
-    def generate_am_modulated_chain(
-        self,
-        message: str,
-        num_steps: int = 50,
-        carrier_freq: float = 3.0,
-        modulation_depth: float = 0.6
-    ):
-        """Generate reasoning chain with AM-modulated lexical diversity"""
+   def string_to_binary(self, message: str) -> list:
+    """Convert message to binary"""
+    binary = []
+    for char in message:
+        binary.extend([int(b) for b in format(ord(char), '08b')])
+    return binary
+
+def generate_am_modulated_chain(
+    self,
+    message: str,
+    num_steps: int = 100,
+    carrier_freq: float = 3.0,
+    modulation_depth: float = 0.6
+):
+    """Generate reasoning chain with AM-modulated lexical diversity using binary encoding"""
+    
+    print(f"\nGenerating nanoGPT reasoning chain...")
+    print(f"Message: '{message}' ({len(message)*8} bits)")
+    print(f"Carrier frequency: {carrier_freq}")
+    
+    # Convert message to binary
+    binary_data = self.string_to_binary(message)
+    print(f"Binary encoding: {len(binary_data)} bits")
+    
+    # Generate AM signal with binary modulation
+    target_diversities = []
+    
+    for step in range(num_steps):
+        # Carrier wave
+        carrier = np.cos(2 * np.pi * step / carrier_freq)
         
-        print(f"\nGenerating nanoGPT reasoning chain...")
-        print(f"Message: '{message}'")
-        print(f"Carrier frequency: {carrier_freq}")
+        # Binary modulation envelope
+        bit_idx = step % len(binary_data)
+        bit_value = binary_data[bit_idx]
         
-        # Generate AM signal
-        am_signal = []
-        envelope_freq = 0.05
+        # Map bit to envelope amplitude
+        # Bit 1 = high diversity, Bit 0 = low diversity
+        if bit_value == 1:
+            envelope = 1.0 + modulation_depth  # High amplitude
+        else:
+            envelope = 1.0 - modulation_depth * 0.7  # Low amplitude (asymmetric)
         
-        for step in range(num_steps):
-            carrier = np.cos(2 * np.pi * step / carrier_freq)
-            envelope = 1.0 + modulation_depth * np.cos(2 * np.pi * step * envelope_freq)
-            amplitude = carrier * envelope
-            am_signal.append(amplitude)
+        amplitude = carrier * envelope
         
-        # Convert to target diversities (0.4 to 0.9)
-        target_diversities = []
-        for amplitude in am_signal:
-            normalized = (amplitude + 1) / 2
-            diversity = 0.4 + normalized * 0.5
-            target_diversities.append(diversity)
+        # Map to diversity range (0.3 to 0.9 for wider range)
+        normalized = (amplitude + 1.6) / 3.2
+        diversity = 0.3 + normalized * 0.6
+        diversity = np.clip(diversity, 0.3, 0.9)
         
-        # Generate reasoning steps
-        reasoning_steps = []
-        actual_diversities = []
+        target_diversities.append(diversity)
+    
+    # Generate reasoning steps
+    reasoning_steps = []
+    actual_diversities = []
+    
+    prompts = [
+        "First, we consider ",
+        "Next, we examine ",
+        "Then, we analyze ",
+        "After that, we study ",
+        "Finally, we review "
+    ]
+    
+    for step_idx, target_diversity in enumerate(target_diversities):
+        prompt = prompts[step_idx % len(prompts)]
         
-        prompts = [
-            "First, we consider ",
-            "Next, we examine ",
-            "Then, we analyze ",
-            "After that, we study ",
-            "Finally, we review "
-        ]
+        generated = self.generate_with_diversity(
+            prompt=prompt,
+            target_diversity=target_diversity,
+            max_new_tokens=30,
+            num_samples=3
+        )
         
-        for step_idx, target_diversity in enumerate(target_diversities):
-            prompt = prompts[step_idx % len(prompts)]
-            
-            generated = self.generate_with_diversity(
-                prompt=prompt,
-                target_diversity=target_diversity,
-                max_new_tokens=30,
-                num_samples=3
-            )
-            
-            reasoning_steps.append(generated)
-            actual_diversity = self.calculate_lexical_diversity(generated)
-            actual_diversities.append(actual_diversity)
-            
-            if step_idx % 10 == 0:
-                print(f"Step {step_idx}: target={target_diversity:.3f}, actual={actual_diversity:.3f}")
-                print(f"  Text: {generated[:80]}...")
+        reasoning_steps.append(generated)
+        actual_diversity = self.calculate_lexical_diversity(generated)
+        actual_diversities.append(actual_diversity)
         
-        correlation = np.corrcoef(target_diversities, actual_diversities)[0, 1]
-        print(f"\nCorrelation: {correlation:.3f}")
-        
-        return {
-            'reasoning_steps': reasoning_steps,
-            'target_diversities': target_diversities,
-            'actual_diversities': actual_diversities,
-            'correlation': correlation,
-            'message': message
-        }
+        if step_idx % 10 == 0:
+            print(f"Step {step_idx}: target={target_diversity:.3f}, actual={actual_diversity:.3f}, bit={binary_data[step_idx % len(binary_data)]}")
+            print(f"  Text: {generated[:80]}...")
+    
+    correlation = np.corrcoef(target_diversities, actual_diversities)[0, 1]
+    print(f"\nCorrelation: {correlation:.3f}")
+    
+    return {
+        'reasoning_steps': reasoning_steps,
+        'target_diversities': target_diversities,
+        'actual_diversities': actual_diversities,
+        'correlation': correlation,
+        'message': message,
+        'binary_data': binary_data
+    }
 
 def main():
     generator = LexicalDiversityNanoGPT(model_path='out-shakespeare-char/ckpt.pt')
